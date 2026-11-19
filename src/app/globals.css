@@ -1,0 +1,82 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 255, 255, 255;
+  --background-start-rgb: 11, 15, 25;
+  --background-end-rgb: 5, 8, 15;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: radial-gradient(circle at 50% 20%, #152238 0%, #080d1a 60%, #03060c 100%);
+  min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Glassmorphism card */
+.glass-panel {
+  background: rgba(18, 24, 38, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-panel-hover {
+  transition: all 0.25s ease-in-out;
+}
+.glass-panel-hover:hover {
+  border-color: rgba(0, 210, 255, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0, 210, 255, 0.1);
+}
+
+/* Echo ring glowing effects */
+.echo-orb-idle {
+  background: radial-gradient(circle, #00d2ff 0%, #0066cc 60%, #0b0f19 100%);
+  box-shadow: 0 0 25px rgba(0, 210, 255, 0.4), inset 0 0 15px rgba(0, 240, 255, 0.3);
+}
+
+.echo-orb-listening {
+  background: radial-gradient(circle, #00f0ff 0%, #0099ff 50%, #7928ca 90%);
+  box-shadow: 0 0 45px rgba(0, 240, 255, 0.9), 0 0 80px rgba(121, 40, 202, 0.6), inset 0 0 25px #ffffff;
+  animation: pulse-slow 1.5s infinite alternate;
+}
+
+.echo-orb-speaking {
+  background: radial-gradient(circle, #38ef7d 0%, #11998e 60%, #00d2ff 100%);
+  box-shadow: 0 0 45px rgba(56, 239, 125, 0.8), 0 0 80px rgba(0, 210, 255, 0.5), inset 0 0 20px #ffffff;
+}
+
+.echo-orb-thinking {
+  background: radial-gradient(circle, #ff007f 0%, #7928ca 60%, #00d2ff 100%);
+  box-shadow: 0 0 40px rgba(255, 0, 127, 0.8), 0 0 70px rgba(121, 40, 202, 0.6);
+  animation: spin-slow 4s linear infinite;
+}
+
+/* Waveform bars */
+.wave-bar {
+  width: 4px;
+  background: linear-gradient(180deg, #00f0ff 0%, #7928ca 100%);
+  border-radius: 9999px;
+  display: inline-block;
+  margin: 0 2px;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(11, 15, 25, 0.5);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 210, 255, 0.4);
+}
