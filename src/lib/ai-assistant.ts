@@ -1,5 +1,6 @@
 import { AssistantResponse } from './types';
 import { saveNote, saveReminder } from './storage';
+import { AUDORA_PLAYLIST } from './music-player';
 
 const JOKES = [
   "Why do programmers prefer dark mode? Because light attracts bugs!",
@@ -13,25 +14,80 @@ const JOKES = [
 export async function processVoiceQuery(inputQuery: string): Promise<AssistantResponse> {
   const query = inputQuery.toLowerCase().trim();
 
-  // 1. GREETINGS
+  // 1. MUSIC & MEDIA COMMANDS
+  if (
+    query.includes('play music') || 
+    query.includes('play a song') || 
+    query.includes('play song') || 
+    query.includes('play audio') || 
+    query.includes('play lofi') || 
+    query.includes('start music') ||
+    query.includes('gana bajao') ||
+    query.includes('play some beats') ||
+    query === 'play'
+  ) {
+    const firstTrack = AUDORA_PLAYLIST[0];
+    return {
+      speechText: `Playing ${firstTrack.title} on Audora.`,
+      displayText: `🎵 **Audora Music Player Started:**\nNow playing: **${firstTrack.title}** by *${firstTrack.artist}*`,
+      actionType: 'media',
+      payload: { action: 'play' },
+    };
+  }
+
+  if (
+    query.includes('stop music') || 
+    query.includes('pause music') || 
+    query.includes('stop song') || 
+    query.includes('pause song') || 
+    query.includes('stop audio') ||
+    query.includes('gana band karo') ||
+    query === 'pause' ||
+    query === 'stop'
+  ) {
+    return {
+      speechText: "Music paused.",
+      displayText: "⏸️ **Music Paused:** Audora player paused.",
+      actionType: 'media',
+      payload: { action: 'pause' },
+    };
+  }
+
+  if (
+    query.includes('next song') || 
+    query.includes('next track') || 
+    query.includes('skip song') || 
+    query.includes('change music') || 
+    query.includes('change song') ||
+    query.includes('agla gana')
+  ) {
+    return {
+      speechText: "Skipping to the next track on Audora.",
+      displayText: "⏭️ **Next Track:** Switching to next song in playlist.",
+      actionType: 'media',
+      payload: { action: 'next' },
+    };
+  }
+
+  // 2. GREETINGS
   if (/^(hello|hi|hey|audora|hey audora|echo|alexa)/i.test(query)) {
     return {
-      speechText: "Hello! I am Audora, your AI Voice Assistant. How can I help you today?",
-      displayText: "👋 Hello! I'm Audora, your personal AI voice assistant. Ask me anything, or try setting a reminder!",
+      speechText: "Hello! I am Audora, your AI Voice Assistant. You can talk to me, take notes, set reminders, or say 'Play music' to stream lofi beats!",
+      displayText: "👋 Hello! I'm Audora, your personal AI voice assistant. Ask me anything, or try saying **'Play music'**!",
       actionType: 'chat',
     };
   }
 
-  // 2. WHO ARE YOU / WHAT CAN YOU DO
+  // 3. WHO ARE YOU / WHAT CAN YOU DO
   if (query.includes('who are you') || query.includes('what are you') || query.includes('what can you do')) {
     return {
-      speechText: "I am Audora, your intelligent AI voice assistant. You can talk to me to save notes, set reminders, check the weather, hear jokes, and answer questions. Everything syncs with your Supabase database.",
-      displayText: "✨ **Audora Voice Assistant Capabilities:**\n• 🎙️ Speech-to-Speech interaction\n• 📝 Voice Notes ('Take a note: meeting at 3 PM')\n• ⏰ Reminders & Timers ('Remind me to call John')\n• ⛅ Weather updates & Time checks\n• ⚡ Cloud sync with Supabase PostgreSQL",
+      speechText: "I am Audora, your intelligent AI voice assistant. You can talk to me to play music, save notes, set reminders, check the weather, hear jokes, and answer questions. Everything syncs with your Supabase database.",
+      displayText: "✨ **Audora Voice Assistant Capabilities:**\n• 🎵 **Built-in Music Player** ('Play music', 'Next song', 'Pause music')\n• 🎙️ Speech-to-Speech interaction with voice visualizer\n• 📝 Voice Notes ('Take a note: meeting at 3 PM')\n• ⏰ Reminders & Timers ('Remind me to call John')\n• ⛅ Weather updates & Time checks\n• ⚡ Cloud sync with Supabase PostgreSQL",
       actionType: 'system',
     };
   }
 
-  // 3. TIME & DATE
+  // 4. TIME & DATE
   if (query.includes('time is it') || query.includes('current time') || query.includes("what's the time")) {
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     return {
@@ -50,7 +106,7 @@ export async function processVoiceQuery(inputQuery: string): Promise<AssistantRe
     };
   }
 
-  // 4. JOKE
+  // 5. JOKE
   if (query.includes('joke') || query.includes('make me laugh')) {
     const joke = JOKES[Math.floor(Math.random() * JOKES.length)];
     return {
@@ -60,7 +116,7 @@ export async function processVoiceQuery(inputQuery: string): Promise<AssistantRe
     };
   }
 
-  // 5. TAKE A NOTE (e.g. "Take a note: Buy groceries" or "Note that we need milk")
+  // 6. TAKE A NOTE (e.g. "Take a note: Buy groceries" or "Note that we need milk")
   if (query.startsWith('take a note') || query.startsWith('note down') || query.startsWith('write a note') || query.startsWith('save note')) {
     const noteText = inputQuery
       .replace(/^(take a note|note down|write a note|save note|note that|note)\s*(to|that|:)?\s*/i, '')
@@ -77,7 +133,7 @@ export async function processVoiceQuery(inputQuery: string): Promise<AssistantRe
     }
   }
 
-  // 6. SET REMINDER (e.g. "Remind me to drink water" or "Set a reminder for doctor appointment at 5pm")
+  // 7. SET REMINDER (e.g. "Remind me to drink water" or "Set a reminder for doctor appointment at 5pm")
   if (query.includes('remind me') || query.includes('set reminder') || query.includes('set a reminder')) {
     let reminderTitle = inputQuery
       .replace(/^(set a reminder to|set a reminder for|set reminder for|remind me to|remind me for|remind me)\s*/i, '')
@@ -104,7 +160,7 @@ export async function processVoiceQuery(inputQuery: string): Promise<AssistantRe
     }
   }
 
-  // 7. WEATHER
+  // 8. WEATHER
   if (query.includes('weather') || query.includes('temperature') || query.includes('forecast')) {
     const cityMatch = inputQuery.match(/weather (in|at|for) ([a-zA-Z\s]+)/i);
     const location = cityMatch ? cityMatch[2].trim() : 'your area';
@@ -115,7 +171,7 @@ export async function processVoiceQuery(inputQuery: string): Promise<AssistantRe
     };
   }
 
-  // 8. TRY API ROUTE (Falls back gracefully to intelligent reply)
+  // 9. TRY API ROUTE (Falls back gracefully to intelligent reply)
   try {
     const res = await fetch('/api/chat', {
       method: 'POST',
@@ -136,10 +192,10 @@ export async function processVoiceQuery(inputQuery: string): Promise<AssistantRe
     // offline or backend fallback
   }
 
-  // 9. SMART LOCAL AI RESPONSE
+  // 10. SMART LOCAL AI RESPONSE
   return {
-    speechText: `Here is what I found regarding "${inputQuery}". Would you like me to make a note of this or set a reminder?`,
-    displayText: `💡 **Audora Answer:**\nI processed your request: *"${inputQuery}"*. You can ask me to save this as a note, set a reminder, or search for further details.`,
+    speechText: `Here is what I found regarding "${inputQuery}". Would you like me to make a note of this or play some music?`,
+    displayText: `💡 **Audora Answer:**\nI processed your request: *"${inputQuery}"*. You can ask me to save a note, set a reminder, or say **'Play music'**!`,
     actionType: 'chat',
   };
 }

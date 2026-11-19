@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Mic, 
-  MicOff, 
   Volume2, 
   VolumeX, 
   Database, 
@@ -12,11 +11,13 @@ import {
   CheckCircle2, 
   Trash2, 
   StickyNote, 
-  HelpCircle, 
   Send,
-  RefreshCw,
-  ExternalLink,
-  Sliders,
+  Play,
+  Pause,
+  SkipForward,
+  SkipBack,
+  Music,
+  Disc3,
   Settings
 } from 'lucide-react';
 import { AssistantState, ConversationItem, VoiceNote, ReminderItem } from '@/lib/types';
@@ -32,11 +33,12 @@ import {
 import { processVoiceQuery } from '@/lib/ai-assistant';
 import { getSpeechRecognition, speakText, stopSpeaking, audioFeedback } from '@/lib/speech';
 import { isSupabaseConfigured } from '@/lib/supabase';
+import { AUDORA_PLAYLIST, Track } from '@/lib/music-player';
 
 export default function AudoraVoiceAssistant() {
   const [assistantState, setAssistantState] = useState<AssistantState>('idle');
   const [transcript, setTranscript] = useState<string>('');
-  const [lastSpeech, setLastSpeech] = useState<string>('Tap the glowing Audora orb or click the microphone to speak.');
+  const [lastSpeech, setLastSpeech] = useState<string>('Tap the glowing Audora orb or say "Play music" to start.');
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [textInput, setTextInput] = useState<string>('');
   
@@ -44,18 +46,33 @@ export default function AudoraVoiceAssistant() {
   const [conversations, setConversations] = useState<ConversationItem[]>([]);
   const [notes, setNotes] = useState<VoiceNote[]>([]);
   const [reminders, setReminders] = useState<ReminderItem[]>([]);
-  const [activeTab, setActiveTab] = useState<'chat' | 'notes' | 'reminders'>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'notes' | 'reminders' | 'music'>('chat');
   const [showConfigModal, setShowConfigModal] = useState<boolean>(false);
 
-  // Recognition ref
+  // Music Player States
+  const [isPlayingMusic, setIsPlayingMusic] = useState<boolean>(false);
+  const [currentTrackIndex, setCurrentTrackIndex] = useState<number>(0);
+  const [musicVolume, setMusicVolume] = useState<number>(0.7);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Speech Recognition ref
   const recognitionRef = useRef<any>(null);
   const isListeningRef = useRef<boolean>(false);
+
+  const currentTrack: Track = AUDORA_PLAYLIST[currentTrackIndex] || AUDORA_PLAYLIST[0];
 
   // Load data on mount
   useEffect(() => {
     refreshData();
     recognitionRef.current = getSpeechRecognition();
   }, []);
+
+  // Update audio volume
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = musicVolume;
+    }
+  }, [musicVolume]);
 
   const refreshData = async () => {
     const [c, n, r] = await Promise.all([
@@ -66,6 +83,44 @@ export default function AudoraVoiceAssistant() {
     setConversations(c);
     setNotes(n);
     setReminders(r);
+  };
+
+  // Music control handlers
+  const handlePlayMusic = () => {
+    if (audioRef.current) {
+      audioRef.current.play().then(() => {
+        setIsPlayingMusic(true);
+      }).catch(err => {
+        console.warn('Audio play restricted or waiting for user interaction:', err);
+      });
+    }
+  };
+
+  const handlePauseMusic = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      setIsPlayingMusic(false);
+    }
+  };
+
+  const handleNextTrack = () => {
+    const nextIdx = (currentTrackIndex + 1) % AUDORA_PLAYLIST.length;
+    setCurrentTrackIndex(nextIdx);
+    setTimeout(() => {
+      if (audioRef.current) {
+        audioRef.current.play().then(() => setIsPlayingMusic(true)).catch(() => {});
+      }
+    }, 100);
+  };
+
+  const handlePrevTrack = () => {
+    const prevIdx = (currentTrackIndex - 1 + AUDORA_PLAYLIST.length) % AUDORA_PLAYLIST.length;
+    setCurrentTrackIndex(prevIdx);
+    setTimeout(() => {
+      if (audioRef.current) {
+        audioRef.current.play().then(() => setIsPlayingMusic(true)).catch(() => {});
+      }
+    }, 100);
   };
 
   // Trigger Assistant Query Execution
@@ -83,16 +138,39 @@ export default function AudoraVoiceAssistant() {
       const saved = await saveConversation(queryText, response.displayText || response.speechText, response.actionType);
       setConversations(prev => [saved, ...prev]);
 
-      // Update state for speech
       setLastSpeech(response.displayText || response.speechText);
 
+      // Handle Music media actions
+      if (response.actionType === 'media' && response.payload) {
+        if (response.payload.action === 'play') {
+          handlePlayMusic();
+        } else if (response.payload.action === 'pause') {
+          handlePauseMusic();
+        } else if (response.payload.action === 'next') {
+          handleNextTrack();
+        }
+      }
+
+      // Voice Audio Response (Duck music volume while Audora speaks)
       if (!isMuted) {
         setAssistantState('speaking');
         audioFeedback.playDoneChime();
+
+        // Duck music volume
+        if (audioRef.current && isPlayingMusic) {
+          audioRef.current.volume = 0.2;
+        }
+
         speakText(
           response.speechText,
           () => setAssistantState('speaking'),
-          () => setAssistantState('idle')
+          () => {
+            setAssistantState('idle');
+            // Restore music volume
+            if (audioRef.current && isPlayingMusic) {
+              audioRef.current.volume = musicVolume;
+            }
+          }
         );
       } else {
         setAssistantState('idle');
@@ -111,6 +189,9 @@ export default function AudoraVoiceAssistant() {
     if (assistantState === 'speaking') {
       stopSpeaking();
       setAssistantState('idle');
+      if (audioRef.current && isPlayingMusic) {
+        audioRef.current.volume = musicVolume;
+      }
       return;
     }
 
@@ -185,6 +266,14 @@ export default function AudoraVoiceAssistant() {
 
   return (
     <div className="min-h-screen flex flex-col text-slate-100">
+      {/* Hidden HTML5 Audio Element for Audora Music Player */}
+      <audio
+        ref={audioRef}
+        src={currentTrack.url}
+        onEnded={handleNextTrack}
+        preload="auto"
+      />
+
       {/* Top Navigation Bar */}
       <header className="border-b border-cyan-500/20 bg-slate-950/60 backdrop-blur-md sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center space-x-3">
@@ -196,11 +285,19 @@ export default function AudoraVoiceAssistant() {
             <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-cyan-400 via-sky-300 to-indigo-400 bg-clip-text text-transparent">
               Audora Voice
             </h1>
-            <p className="text-xs text-slate-400">Next-Gen AI Voice Assistant</p>
+            <p className="text-xs text-slate-400">Next-Gen AI Voice & Music Assistant</p>
           </div>
         </div>
 
         <div className="flex items-center space-x-3">
+          {/* Music Mini Indicator */}
+          {isPlayingMusic && (
+            <div className="hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-300 text-xs font-medium animate-pulse">
+              <Disc3 className="w-3.5 h-3.5 animate-spin" />
+              <span>Playing: {currentTrack.title.substring(0, 16)}...</span>
+            </div>
+          )}
+
           {/* Supabase Status Pill */}
           <button 
             onClick={() => setShowConfigModal(true)}
@@ -214,7 +311,7 @@ export default function AudoraVoiceAssistant() {
             <span>{isSupabaseConfigured ? 'Supabase Connected' : 'Local Storage (Sync DB)'}</span>
           </button>
 
-          {/* Mute Button */}
+          {/* Mute Assistant Audio */}
           <button
             onClick={() => {
               if (!isMuted) stopSpeaking();
@@ -244,11 +341,11 @@ export default function AudoraVoiceAssistant() {
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
-        {/* Left / Center Column: Audora Orb & Voice Center */}
-        <section className="lg:col-span-7 flex flex-col items-center justify-center space-y-8 glass-panel p-6 md:p-10 rounded-3xl shadow-2xl relative overflow-hidden">
+        {/* Left / Center Column: Audora Orb, Voice Center & Music Dock */}
+        <section className="lg:col-span-7 flex flex-col items-center justify-center space-y-6 glass-panel p-6 md:p-10 rounded-3xl shadow-2xl relative overflow-hidden">
           {/* Ambient Glow Backdrop */}
           <div className="absolute -top-24 -left-24 w-96 h-96 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none"></div>
-          <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none"></div>
+          <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none"></div>
 
           {/* Assistant Status Label */}
           <div className="flex items-center space-x-2 text-xs uppercase tracking-widest font-semibold px-4 py-1.5 rounded-full border border-cyan-500/30 bg-cyan-950/40 text-cyan-300">
@@ -256,10 +353,11 @@ export default function AudoraVoiceAssistant() {
               assistantState === 'listening' ? 'bg-cyan-400 animate-ping' :
               assistantState === 'speaking' ? 'bg-emerald-400 animate-pulse' :
               assistantState === 'thinking' ? 'bg-purple-400 animate-spin' :
+              isPlayingMusic ? 'bg-indigo-400 animate-pulse' :
               'bg-slate-400'
             }`}></span>
             <span>
-              {assistantState === 'idle' && 'Audora is Ready • Tap Orb to Speak'}
+              {assistantState === 'idle' && (isPlayingMusic ? 'Audora Playing Music • Tap Orb to Talk' : 'Audora is Ready • Tap Orb to Speak')}
               {assistantState === 'listening' && 'Listening to you...'}
               {assistantState === 'thinking' && 'Audora is processing...'}
               {assistantState === 'speaking' && 'Audora Speaking...'}
@@ -267,20 +365,22 @@ export default function AudoraVoiceAssistant() {
           </div>
 
           {/* THE AUDORA GLOWING RING / ORB */}
-          <div className="relative group cursor-pointer my-4" onClick={toggleListening}>
+          <div className="relative group cursor-pointer my-2" onClick={toggleListening}>
             {/* Outer Pulsing Aura */}
             <div className={`absolute -inset-4 rounded-full transition-all duration-700 blur-xl ${
               assistantState === 'listening' ? 'bg-cyan-400/60 scale-110' :
               assistantState === 'speaking' ? 'bg-emerald-400/50 scale-105' :
               assistantState === 'thinking' ? 'bg-purple-500/60 scale-110' :
+              isPlayingMusic ? 'bg-indigo-500/30 scale-105' :
               'bg-cyan-600/20 group-hover:bg-cyan-500/30 scale-100'
             }`}></div>
 
             {/* Orb Outer Border */}
-            <div className={`w-56 h-56 md:w-64 md:h-64 rounded-full p-2 flex items-center justify-center transition-all duration-500 ${
+            <div className={`w-52 h-52 md:w-60 md:h-60 rounded-full p-2 flex items-center justify-center transition-all duration-500 ${
               assistantState === 'listening' ? 'bg-gradient-to-tr from-cyan-400 via-sky-300 to-indigo-500 ring-4 ring-cyan-300/60' :
               assistantState === 'speaking' ? 'bg-gradient-to-tr from-emerald-400 via-teal-300 to-cyan-500 ring-4 ring-emerald-300/60' :
               assistantState === 'thinking' ? 'bg-gradient-to-tr from-purple-500 via-pink-400 to-cyan-400 ring-4 ring-purple-400/60 animate-spin-slow' :
+              isPlayingMusic ? 'bg-gradient-to-tr from-indigo-500 via-purple-400 to-cyan-400 ring-2 ring-purple-400/40' :
               'bg-gradient-to-b from-cyan-900/60 to-slate-900 border border-cyan-500/40 group-hover:border-cyan-400'
             }`}>
               
@@ -291,28 +391,84 @@ export default function AudoraVoiceAssistant() {
                 assistantState === 'thinking' ? 'echo-orb-thinking' :
                 'echo-orb-idle group-hover:scale-102'
               }`}>
-                {/* Voice Visualizer Waveform */}
-                {assistantState === 'speaking' || assistantState === 'listening' ? (
+                {/* Voice & Music Visualizer Waveform */}
+                {assistantState === 'speaking' || assistantState === 'listening' || isPlayingMusic ? (
                   <div className="flex items-center justify-center h-16 space-x-1.5">
                     {[0.8, 1.4, 0.6, 1.8, 1.0, 1.6, 0.7, 1.3, 0.9].map((val, idx) => (
                       <span 
                         key={idx} 
                         className="wave-bar h-12"
                         style={{
-                          animation: `wave ${0.6 + (idx % 4) * 0.2}s ease-in-out infinite`,
-                          animationDelay: `${idx * 0.1}s`,
-                          height: `${24 * val}px`,
+                          animation: `wave ${0.5 + (idx % 4) * 0.2}s ease-in-out infinite`,
+                          animationDelay: `${idx * 0.08}s`,
+                          height: `${22 * val}px`,
                         }}
                       />
                     ))}
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center space-y-2 text-cyan-200">
-                    <Mic className="w-12 h-12 stroke-[1.5] filter drop-shadow-[0_0_8px_rgba(0,210,255,0.8)]" />
+                    <Mic className="w-10 h-10 stroke-[1.5] filter drop-shadow-[0_0_8px_rgba(0,210,255,0.8)]" />
                     <span className="text-xs uppercase tracking-widest font-semibold opacity-90">Talk to Audora</span>
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+
+          {/* AUDORA INTEGRATED MUSIC PLAYER DOCK */}
+          <div className="w-full max-w-xl p-4 rounded-2xl bg-slate-900/90 border border-purple-500/30 shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center space-x-3 w-full sm:w-auto">
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center bg-purple-950/70 border border-purple-500/40 text-purple-300 shadow-md ${isPlayingMusic ? 'animate-spin-slow' : ''}`}>
+                <Music className="w-6 h-6" />
+              </div>
+              <div className="overflow-hidden">
+                <p className="text-xs font-bold text-white truncate max-w-[200px]">
+                  {currentTrack.title}
+                </p>
+                <p className="text-[11px] text-purple-300/80 truncate">
+                  {currentTrack.artist} • <span className="text-slate-400">{currentTrack.genre}</span>
+                </p>
+              </div>
+            </div>
+
+            {/* Music Controls */}
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={handlePrevTrack}
+                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all"
+                title="Previous Track"
+              >
+                <SkipBack className="w-4 h-4" />
+              </button>
+
+              <button
+                onClick={isPlayingMusic ? handlePauseMusic : handlePlayMusic}
+                className="p-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold transition-all shadow-md hover:scale-105"
+                title={isPlayingMusic ? 'Pause Music' : 'Play Music'}
+              >
+                {isPlayingMusic ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-white" />}
+              </button>
+
+              <button
+                onClick={handleNextTrack}
+                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all"
+                title="Next Track"
+              >
+                <SkipForward className="w-4 h-4" />
+              </button>
+
+              {/* Volume Slider */}
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.05"
+                value={musicVolume}
+                onChange={(e) => setMusicVolume(parseFloat(e.target.value))}
+                className="w-16 h-1.5 ml-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-purple-400"
+                title={`Music Volume: ${Math.round(musicVolume * 100)}%`}
+              />
             </div>
           </div>
 
@@ -357,7 +513,7 @@ export default function AudoraVoiceAssistant() {
               type="text"
               value={textInput}
               onChange={(e) => setTextInput(e.target.value)}
-              placeholder="Or type to Audora (e.g. 'Set a reminder to drink water')"
+              placeholder="Or type to Audora (e.g. 'Play music', 'Take a note')"
               className="flex-1 bg-transparent px-4 py-2 text-sm text-white placeholder-slate-400 focus:outline-none"
             />
             <button
@@ -374,12 +530,14 @@ export default function AudoraVoiceAssistant() {
             <p className="text-xs text-slate-400 mb-2 font-medium">Try saying or clicking:</p>
             <div className="flex flex-wrap gap-2">
               {[
+                "Play music",
+                "Next song",
+                "Pause music",
                 "Audora, who are you?",
-                "Take a note: Buy groceries tomorrow",
-                "Remind me to call John at 6 PM",
+                "Take a note: Buy milk",
+                "Remind me to drink water at 5 PM",
                 "What is the weather today?",
-                "Tell me a joke",
-                "What time is it?"
+                "Tell me a joke"
               ].map((cmd, i) => (
                 <button
                   key={i}
@@ -393,7 +551,7 @@ export default function AudoraVoiceAssistant() {
           </div>
         </section>
 
-        {/* Right Column: Supabase Powered Memory & Hub */}
+        {/* Right Column: Supabase Memory & Hub */}
         <section className="lg:col-span-5 flex flex-col space-y-4">
           {/* Tabs */}
           <div className="flex rounded-2xl bg-slate-900/90 p-1.5 border border-slate-800">
@@ -408,6 +566,16 @@ export default function AudoraVoiceAssistant() {
               History ({conversations.length})
             </button>
             <button
+              onClick={() => setActiveTab('music')}
+              className={`flex-1 py-2 text-xs font-semibold rounded-xl transition-all ${
+                activeTab === 'music' 
+                  ? 'bg-purple-500 text-white shadow-md' 
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Tracks ({AUDORA_PLAYLIST.length})
+            </button>
+            <button
               onClick={() => setActiveTab('notes')}
               className={`flex-1 py-2 text-xs font-semibold rounded-xl transition-all ${
                 activeTab === 'notes' 
@@ -415,7 +583,7 @@ export default function AudoraVoiceAssistant() {
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              Voice Notes ({notes.length})
+              Notes ({notes.length})
             </button>
             <button
               onClick={() => setActiveTab('reminders')}
@@ -428,6 +596,43 @@ export default function AudoraVoiceAssistant() {
               Reminders ({reminders.length})
             </button>
           </div>
+
+          {/* Tab: Music Playlist */}
+          {activeTab === 'music' && (
+            <div className="glass-panel p-5 rounded-3xl space-y-3 max-h-[600px] overflow-y-auto">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                <h3 className="text-sm font-semibold text-slate-200">Audora Music Library</h3>
+                <span className="text-xs text-purple-300">Live Streaming</span>
+              </div>
+              {AUDORA_PLAYLIST.map((track, idx) => (
+                <div
+                  key={track.id}
+                  onClick={() => {
+                    setCurrentTrackIndex(idx);
+                    setTimeout(handlePlayMusic, 50);
+                  }}
+                  className={`p-3 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${
+                    currentTrackIndex === idx 
+                      ? 'bg-purple-950/60 border-purple-500/50 shadow-md' 
+                      : 'bg-slate-900/60 border-slate-800 hover:border-slate-700'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className={`p-2 rounded-xl ${currentTrackIndex === idx && isPlayingMusic ? 'bg-purple-500 text-white animate-pulse' : 'bg-slate-800 text-slate-400'}`}>
+                      <Music className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className={`text-xs font-semibold ${currentTrackIndex === idx ? 'text-purple-300' : 'text-slate-200'}`}>
+                        {track.title}
+                      </p>
+                      <p className="text-[10px] text-slate-400">{track.artist} • {track.genre}</p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-mono text-slate-500">{track.duration}</span>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Tab 1: Conversation History */}
           {activeTab === 'chat' && (
@@ -600,14 +805,8 @@ export default function AudoraVoiceAssistant() {
               <div>
                 <h4 className="font-semibold text-white mb-2">2. Deploy to Vercel</h4>
                 <ol className="list-decimal list-inside space-y-1.5 text-slate-400">
-                  <li>Run <code className="bg-slate-800 px-1 py-0.5 rounded text-cyan-300">vercel</code> in the terminal</li>
-                  <li>Add environment variables in Vercel Project Settings:
-                    <ul className="list-disc list-inside pl-4 mt-1 space-y-0.5 text-slate-400 font-mono text-[11px]">
-                      <li>NEXT_PUBLIC_SUPABASE_URL</li>
-                      <li>NEXT_PUBLIC_SUPABASE_ANON_KEY</li>
-                      <li>GEMINI_API_KEY (optional)</li>
-                    </ul>
-                  </li>
+                  <li>Run <code className="bg-slate-800 px-1 py-0.5 rounded text-cyan-300">vercel --prod</code> in terminal</li>
+                  <li>Add environment variables in Vercel Project Settings</li>
                 </ol>
               </div>
             </div>
@@ -626,7 +825,7 @@ export default function AudoraVoiceAssistant() {
 
       {/* Footer */}
       <footer className="border-t border-slate-800/80 py-4 px-6 text-center text-xs text-slate-500">
-        Audora AI Voice Assistant • Next.js 14 • Supabase PostgreSQL • Vercel Ready
+        Audora AI Voice & Music Assistant • Next.js 14 • Supabase PostgreSQL • Vercel Live
       </footer>
     </div>
   );
