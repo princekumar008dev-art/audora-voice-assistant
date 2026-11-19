@@ -22,7 +22,7 @@ export async function POST(req: Request) {
                 {
                   parts: [
                     {
-                      text: `You are Echo, a smart, friendly, concise AI voice assistant similar to Amazon Echo / Alexa.
+                      text: `You are Audora, a smart, friendly, concise AI voice assistant.
 Provide a direct, natural response under 2-3 sentences suitable for speech synthesis.
 User Query: "${prompt}"`,
                     },
@@ -51,7 +51,7 @@ User Query: "${prompt}"`,
 
     // Default intelligent conversational response
     const defaultReplies: { [key: string]: string } = {
-      default: `I understood: "${prompt}". Feel free to ask me to set a reminder, take a note, or check the weather.`,
+      default: `I am Audora. I understood: "${prompt}". Feel free to ask me to set a reminder, take a note, or check the weather.`,
     };
 
     return NextResponse.json({

@@ -33,10 +33,10 @@ import { processVoiceQuery } from '@/lib/ai-assistant';
 import { getSpeechRecognition, speakText, stopSpeaking, audioFeedback } from '@/lib/speech';
 import { isSupabaseConfigured } from '@/lib/supabase';
 
-export default function EchoVoiceAssistant() {
+export default function AudoraVoiceAssistant() {
   const [assistantState, setAssistantState] = useState<AssistantState>('idle');
   const [transcript, setTranscript] = useState<string>('');
-  const [lastSpeech, setLastSpeech] = useState<string>('Tap the glowing Echo orb or click the microphone to speak.');
+  const [lastSpeech, setLastSpeech] = useState<string>('Tap the glowing Audora orb or click the microphone to speak.');
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [textInput, setTextInput] = useState<string>('');
   
@@ -54,7 +54,6 @@ export default function EchoVoiceAssistant() {
   // Load data on mount
   useEffect(() => {
     refreshData();
-    // Check speech recognition support
     recognitionRef.current = getSpeechRecognition();
   }, []);
 
@@ -99,7 +98,6 @@ export default function EchoVoiceAssistant() {
         setAssistantState('idle');
       }
 
-      // Refresh side lists
       await refreshData();
     } catch (err) {
       console.error(err);
@@ -175,7 +173,6 @@ export default function EchoVoiceAssistant() {
     }
   };
 
-  // Replay a message
   const handleReplay = (text: string) => {
     stopSpeaking();
     setAssistantState('speaking');
@@ -197,9 +194,9 @@ export default function EchoVoiceAssistant() {
           </div>
           <div>
             <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-cyan-400 via-sky-300 to-indigo-400 bg-clip-text text-transparent">
-              Echo Voice
+              Audora Voice
             </h1>
-            <p className="text-xs text-slate-400">Amazon Echo & Alexa AI Assistant</p>
+            <p className="text-xs text-slate-400">Next-Gen AI Voice Assistant</p>
           </div>
         </div>
 
@@ -247,7 +244,7 @@ export default function EchoVoiceAssistant() {
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
-        {/* Left / Center Column: Echo Orb & Voice Center */}
+        {/* Left / Center Column: Audora Orb & Voice Center */}
         <section className="lg:col-span-7 flex flex-col items-center justify-center space-y-8 glass-panel p-6 md:p-10 rounded-3xl shadow-2xl relative overflow-hidden">
           {/* Ambient Glow Backdrop */}
           <div className="absolute -top-24 -left-24 w-96 h-96 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none"></div>
@@ -262,14 +259,14 @@ export default function EchoVoiceAssistant() {
               'bg-slate-400'
             }`}></span>
             <span>
-              {assistantState === 'idle' && 'Echo is Ready • Tap Orb to Speak'}
+              {assistantState === 'idle' && 'Audora is Ready • Tap Orb to Speak'}
               {assistantState === 'listening' && 'Listening to you...'}
-              {assistantState === 'thinking' && 'Processing query...'}
-              {assistantState === 'speaking' && 'Echo Speaking...'}
+              {assistantState === 'thinking' && 'Audora is processing...'}
+              {assistantState === 'speaking' && 'Audora Speaking...'}
             </span>
           </div>
 
-          {/* THE AMAZON ECHO GLOWING RING / ORB */}
+          {/* THE AUDORA GLOWING RING / ORB */}
           <div className="relative group cursor-pointer my-4" onClick={toggleListening}>
             {/* Outer Pulsing Aura */}
             <div className={`absolute -inset-4 rounded-full transition-all duration-700 blur-xl ${
@@ -279,7 +276,7 @@ export default function EchoVoiceAssistant() {
               'bg-cyan-600/20 group-hover:bg-cyan-500/30 scale-100'
             }`}></div>
 
-            {/* Echo Ring Outer Border */}
+            {/* Orb Outer Border */}
             <div className={`w-56 h-56 md:w-64 md:h-64 rounded-full p-2 flex items-center justify-center transition-all duration-500 ${
               assistantState === 'listening' ? 'bg-gradient-to-tr from-cyan-400 via-sky-300 to-indigo-500 ring-4 ring-cyan-300/60' :
               assistantState === 'speaking' ? 'bg-gradient-to-tr from-emerald-400 via-teal-300 to-cyan-500 ring-4 ring-emerald-300/60' :
@@ -312,7 +309,7 @@ export default function EchoVoiceAssistant() {
                 ) : (
                   <div className="flex flex-col items-center justify-center space-y-2 text-cyan-200">
                     <Mic className="w-12 h-12 stroke-[1.5] filter drop-shadow-[0_0_8px_rgba(0,210,255,0.8)]" />
-                    <span className="text-xs uppercase tracking-widest font-semibold opacity-90">Tap to Talk</span>
+                    <span className="text-xs uppercase tracking-widest font-semibold opacity-90">Talk to Audora</span>
                   </div>
                 )}
               </div>
@@ -331,7 +328,7 @@ export default function EchoVoiceAssistant() {
               <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-800/80 text-xs text-slate-400">
                 <span className="flex items-center space-x-1 font-semibold text-cyan-400">
                   <Sparkles className="w-3.5 h-3.5" />
-                  <span>Echo Response</span>
+                  <span>Audora Response</span>
                 </span>
                 <button
                   onClick={() => handleReplay(lastSpeech)}
@@ -360,7 +357,7 @@ export default function EchoVoiceAssistant() {
               type="text"
               value={textInput}
               onChange={(e) => setTextInput(e.target.value)}
-              placeholder="Or type a command (e.g. 'Set a reminder to drink water')"
+              placeholder="Or type to Audora (e.g. 'Set a reminder to drink water')"
               className="flex-1 bg-transparent px-4 py-2 text-sm text-white placeholder-slate-400 focus:outline-none"
             />
             <button
@@ -377,7 +374,7 @@ export default function EchoVoiceAssistant() {
             <p className="text-xs text-slate-400 mb-2 font-medium">Try saying or clicking:</p>
             <div className="flex flex-wrap gap-2">
               {[
-                "Who are you?",
+                "Audora, who are you?",
                 "Take a note: Buy groceries tomorrow",
                 "Remind me to call John at 6 PM",
                 "What is the weather today?",
@@ -629,7 +626,7 @@ export default function EchoVoiceAssistant() {
 
       {/* Footer */}
       <footer className="border-t border-slate-800/80 py-4 px-6 text-center text-xs text-slate-500">
-        Echo AI Voice Assistant • Next.js 14 • Supabase PostgreSQL • Vercel Ready
+        Audora AI Voice Assistant • Next.js 14 • Supabase PostgreSQL • Vercel Ready
       </footer>
     </div>
   );

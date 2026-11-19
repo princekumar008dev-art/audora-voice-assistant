@@ -14,10 +14,10 @@ export async function processVoiceQuery(inputQuery: string): Promise<AssistantRe
   const query = inputQuery.toLowerCase().trim();
 
   // 1. GREETINGS
-  if (/^(hello|hi|hey|echo|alexa|hey echo)/i.test(query)) {
+  if (/^(hello|hi|hey|audora|hey audora|echo|alexa)/i.test(query)) {
     return {
-      speechText: "Hello! I am Echo, your AI Voice Assistant. How can I help you today?",
-      displayText: "👋 Hello! I'm Echo, your personal AI voice assistant. Ask me anything, or try setting a reminder!",
+      speechText: "Hello! I am Audora, your AI Voice Assistant. How can I help you today?",
+      displayText: "👋 Hello! I'm Audora, your personal AI voice assistant. Ask me anything, or try setting a reminder!",
       actionType: 'chat',
     };
   }
@@ -25,8 +25,8 @@ export async function processVoiceQuery(inputQuery: string): Promise<AssistantRe
   // 2. WHO ARE YOU / WHAT CAN YOU DO
   if (query.includes('who are you') || query.includes('what are you') || query.includes('what can you do')) {
     return {
-      speechText: "I am Echo, your intelligent AI voice assistant inspired by Amazon Echo. You can talk to me to save notes, set reminders, check the weather, hear jokes, and answer questions. Everything syncs with your Supabase database.",
-      displayText: "✨ **Echo Voice Assistant Capabilities:**\n• 🎙️ Speech-to-Speech interaction\n• 📝 Voice Notes ('Take a note: meeting at 3 PM')\n• ⏰ Reminders & Timers ('Remind me to call John')\n• ⛅ Weather updates & Time checks\n• ⚡ Cloud sync with Supabase PostgreSQL",
+      speechText: "I am Audora, your intelligent AI voice assistant. You can talk to me to save notes, set reminders, check the weather, hear jokes, and answer questions. Everything syncs with your Supabase database.",
+      displayText: "✨ **Audora Voice Assistant Capabilities:**\n• 🎙️ Speech-to-Speech interaction\n• 📝 Voice Notes ('Take a note: meeting at 3 PM')\n• ⏰ Reminders & Timers ('Remind me to call John')\n• ⛅ Weather updates & Time checks\n• ⚡ Cloud sync with Supabase PostgreSQL",
       actionType: 'system',
     };
   }
@@ -55,7 +55,7 @@ export async function processVoiceQuery(inputQuery: string): Promise<AssistantRe
     const joke = JOKES[Math.floor(Math.random() * JOKES.length)];
     return {
       speechText: joke,
-      displayText: `😂 **Echo Joke:**\n${joke}`,
+      displayText: `😂 **Audora Joke:**\n${joke}`,
       actionType: 'chat',
     };
   }
@@ -108,7 +108,6 @@ export async function processVoiceQuery(inputQuery: string): Promise<AssistantRe
   if (query.includes('weather') || query.includes('temperature') || query.includes('forecast')) {
     const cityMatch = inputQuery.match(/weather (in|at|for) ([a-zA-Z\s]+)/i);
     const location = cityMatch ? cityMatch[2].trim() : 'your area';
-    const temp = Math.floor(Math.random() * 12) + 20; // 20 - 32°C
     return {
       speechText: `In ${location}, it is currently 24 degrees Celsius with mostly clear skies.`,
       displayText: `⛅ **Weather in ${location.toUpperCase()}:**\n24°C • Mostly Clear Skies • Humidity 55% • Wind 12 km/h`,
@@ -140,7 +139,7 @@ export async function processVoiceQuery(inputQuery: string): Promise<AssistantRe
   // 9. SMART LOCAL AI RESPONSE
   return {
     speechText: `Here is what I found regarding "${inputQuery}". Would you like me to make a note of this or set a reminder?`,
-    displayText: `💡 **Echo Answer:**\nI processed your request: *"${inputQuery}"*. You can ask me to save this as a note, set a reminder, or search for further details.`,
+    displayText: `💡 **Audora Answer:**\nI processed your request: *"${inputQuery}"*. You can ask me to save this as a note, set a reminder, or search for further details.`,
     actionType: 'chat',
   };
 }

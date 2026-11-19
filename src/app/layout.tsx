@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Echo - AI Voice Assistant | Amazon Echo & Alexa Web App',
-  description: 'Futuristic AI Voice Assistant web app inspired by Amazon Echo & Alexa. Powered by Web Speech, Next.js, and Supabase.',
+  title: 'Audora - AI Voice Assistant | Smart Voice Companion',
+  description: 'Futuristic AI Voice Assistant web app named Audora. Powered by Web Speech, Next.js, and Supabase.',
 };
 
 export default function RootLayout({
